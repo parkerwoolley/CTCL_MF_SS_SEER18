@@ -1,0 +1,945 @@
+
+# pwoolle1_SezarySyndrome.jl
+# Parker Woolley (parker_woolley@brown.edu)
+# 06/30/2019
+# For use with SEER-Data set -18
+# Studies the prevalence, Standardized Incidence Ratios (SIR), and difference in secondary malignancies for Cutaneous T-Cell Lymphoma (CTCL), Mysosis Fungoides (MF), and Sezary Syndrome (SS)
+
+# UNMUTE THE FOLLOWING PACKAGES UPON FIRST TIME RUNNING THIS ON COMMAND PROMPT/POWERSHELL
+# importing DataFrames and CSV for the first time
+
+#=
+using Pkg
+Pkg.add("DataFrames")
+using Pkg
+Pkg.add("CSV")
+using Pkg
+Pkg.add("StatsBase")
+using Pkg
+Pkg.add("VegaLite")
+using Pkg
+Pkg.add("Query")
+using Pkg
+Pkg.add("HypothesisTests")
+using Pkg
+Pkg.add("Statistics")
+=#
+
+# PREDICTMD FOR FUTURE DEVELOPMENT. NOT NECESSARY TO UNMUTE TO RUN THIS PROGRAM
+#=
+import PredictMDExtra
+PredictMDExtra.import_all()
+import PredictMD
+PredictMD.import_all()
+=#
+
+println("using packages CSV, DataFrames, StatsBase, VegaLite, Query, Statistics, HypothesisTests")
+println()
+
+using CSV, DataFrames, StatsBase, VegaLite, Query, Statistics, HypothesisTests
+
+println("Finished unloading packages.")
+println( )
+
+# OPENING 3 .TXT FILES DELIMINATED BY ","
+println("Reading text file into a DataFrame.")
+println()
+totalctcl_df = CSV.read("ctcltotal.txt", delim = ",") |>DataFrame
+totalss_df = CSV.read("Total_SS.txt", delim = ",") |> DataFrame
+totalmf_df = CSV.read("Total_MF.txt", delim = ",") |> DataFrame
+
+# FUTURE DEVELOPMENT TO QUERY IN REAL TIME. NEED CREATION OF IF STATEMENTS.
+# display(first(totalctcl_df,20))
+#truetotalctcl_df = CSV.read("")
+# display(totalctcl_df)
+#= WORK IN PROGRESS
+println("Would you like to delete all entries where primary cancer was not Mycosis Fungoides?")
+    user_response = readline(stdin))
+    if
+        user_response = "yes"
+=#
+
+# RENAMING THE DATAFRAME TO MORE MANAGEABLE SINCGLE STRING HEADERS
+println("Renaming data frame columns")
+
+rename!(totalctcl_df, Symbol("Sequence number") => :Sequence)
+rename!(totalctcl_df, Symbol("Patient ID") => :Id),
+rename!(totalctcl_df, Symbol("Age recode with <1 year olds") => :Age),
+rename!(totalctcl_df, Symbol("Lymphoma subtype recode/WHO 2008") => :Lymphoma)
+rename!(totalctcl_df, Symbol("Survival months") => :Survival_months)
+rename!(totalctcl_df, Symbol("COD to site recode") => :COD)
+rename!(totalctcl_df, Symbol("Age at diagnosis") => :Age_at_Dx)
+rename!(totalctcl_df, Symbol("Site recode ICD-O-3/WHO 2008") => :Cancer)
+rename!(totalctcl_df, Symbol("Year of birth") => :Year_of_birth)
+rename!(totalctcl_df, Symbol("Race/ethnicity") => :Race)
+rename!(totalctcl_df, Symbol("Year of diagnosis") => :YOD)
+
+rename!(totalss_df, Symbol("Sequence number") => :Sequence)
+rename!(totalss_df, Symbol("Patient ID") => :Id),
+rename!(totalss_df, Symbol("Age recode with <1 year olds") => :Age),
+rename!(totalss_df, Symbol("Lymphoma subtype recode/WHO 2008") => :Lymphoma)
+rename!(totalss_df, Symbol("Survival months") => :Survival_months)
+rename!(totalss_df, Symbol("COD to site recode") => :COD)
+rename!(totalss_df, Symbol("Age at diagnosis") => :Age_at_Dx)
+rename!(totalss_df, Symbol("Site recode ICD-O-3/WHO 2008") => :Cancer)
+rename!(totalss_df, Symbol("Year of birth") => :Year_of_birth)
+rename!(totalss_df, Symbol("Race/ethnicity") => :Race)
+rename!(totalss_df, Symbol("Year of diagnosis") => :YOD)
+
+rename!(totalmf_df, Symbol("Sequence number") => :Sequence)
+rename!(totalmf_df, Symbol("Patient ID") => :Id),
+rename!(totalmf_df, Symbol("Age recode with <1 year olds") => :Age),
+rename!(totalmf_df, Symbol("Lymphoma subtype recode/WHO 2008") => :Lymphoma)
+rename!(totalmf_df, Symbol("Survival months") => :Survival_months)
+rename!(totalmf_df, Symbol("COD to site recode") => :COD)
+rename!(totalmf_df, Symbol("Age at diagnosis") => :Age_at_Dx)
+rename!(totalmf_df, Symbol("Site recode ICD-O-3/WHO 2008") => :Cancer)
+rename!(totalmf_df, Symbol("Year of birth") => :Year_of_birth)
+rename!(totalmf_df, Symbol("Race/ethnicity") => :Race)
+rename!(totalmf_df, Symbol("Year of diagnosis") => :YOD)
+println()
+
+################################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+
+# DISPLAYING THE CALCULATIONS OF MYCOSIS FUNGOIDES AND SEZARY SYNDROME. THESE CALCULATIONS ARE USED FOR STANDARDIZED INCIDENCE RATIOS
+
+println("total MF in SEER-18")
+total_MF_ctcl_df = @from i in totalctcl_df begin
+    @where i.Lymphoma == "2(b)2.1.1 Mycosis fungoides"
+    @select {i.Id, i.Sequence}
+    @collect DataFrame
+end;
+println()
+count_total_MF_ctcl_df = (size(total_MF_ctcl_df,2))
+println()
+
+println("total MF that were 1st of 2 or more primaries")
+total_MF_with_Secondary_Malig_df = @from i in total_MF_ctcl_df begin
+    @where i.Sequence == "1st of 2 or more primaries"
+    @select {i.Id, i.Sequence}
+    @collect DataFrame
+end;
+println()
+display(size(total_MF_with_Secondary_Malig_df, 2))
+println()
+count_total_MF_with_Secondary_Malig_df = size(total_MF_with_Secondary_Malig_df,2)
+
+println("total MF that were One primary only.")
+total_MF_primaryonly_ctcl_df = @from i in total_MF_ctcl_df begin
+    @where i.Sequence == "One primary only"
+    @select {i.Id, i.Sequence}
+    @collect DataFrame
+end;
+println()
+display(size(total_MF_primaryonly_ctcl_df))
+println()
+count_total_MF_primaryonly_ctcl_df = size(total_MF_primaryonly_ctcl_df,2)
+
+println("total SS in SEER-18")
+total_SS_ctcl_df = @from i in totalctcl_df begin
+    @where i.Lymphoma == "2(b)2.1.2 Sezary syndrome"
+    @select {i.Id, i.Sequence}
+    @collect DataFrame
+end;
+println()
+display(size(total_SS_ctcl_df))
+println()
+
+count_total_SS_ctcl_df = size(total_SS_ctcl_df,2)
+
+println("total SS that were 1st of 2 or more primaries.")
+total_SS_with_Secondary_Malig_df = @from i in total_SS_ctcl_df begin
+    @where i.Sequence == "1st of 2 or more primaries"
+    @select {i.Id, i.Sequence}
+    @collect DataFrame
+end;
+println()
+display(size(total_SS_with_Secondary_Malig_df))
+println()
+count_total_SS_with_Secondary_Malig_df = size(total_SS_with_Secondary_Malig_df,2)
+
+println("total SS that were One primary only.")
+total_SS_primaryonly_ctcl_df = @from i in total_SS_ctcl_df begin
+    @where i.Sequence == "One primary only"
+    @select {i.Id, i.Sequence}
+    @collect DataFrame
+end;
+println()
+display(size(total_SS_primaryonly_ctcl_df))
+println()
+count_total_SS_primaryonly_ctcl_df = size(total_SS_primaryonly_ctcl_df,2)
+
+# TEMPORARY FIX FOR 'disposition_to_dev_df' - PROGRAM DID NOT ERROR, BUT DID NOT CALCULATE THE SIZES UPON SECOND PASS. HARDCODED RESULTS CURRENTLY
+
+disposition_to_dev_df = DataFrame(Type_of_CTCL = ["Total_Mycosis", "Only_Primary_Mycosis", "Mycosis_with_Secondary", "Total_Sezary", "Only_Primary_Sezary", "Sezary_with_Secondary"], counts = ["10156", "7249","1417","337","231","35"])
+#counts = ["$count_total_MF_ctcl_df", "$count_total_MF_primaryonly_ctcl_df", "$count_total_MF_with_Secondary_Malig_df", "$count_total_SS_ctcl_df","$count_total_SS_ctcl_df", "$count_total_SS_with_Secondary_Malig_df"])
+    
+
+
+display(disposition_to_dev_df)
+
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+
+# DATAFRAME CREATION FOR SECONDARY MALIGNANCIES
+
+# CREATING DATA FRAME WITH PATIENTS (SS) WHO DID DEVELOP SECONDARY MALIGNANCIES
+ss_with_secondarymalignancy_df = @from i in totalss_df begin
+    @where i.Sequence == "1st of 2 or more primaries"
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx, i.YOD}
+    @collect DataFrame
+end;
+# display(first(ss_with_secondarymalignancy_df, 10))
+println()
+
+# DATA FRAME FOR SS DIAGNOSED IN 2011+
+ss_with_secondarymalignancy_after_2011_df = @from i in ss_with_secondarymalignancy_df begin
+    @where i.YOD > 2010
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx, i.YOD}
+    @collect DataFrame
+end;
+# display(ss_with_secondarymalignancy_after_2011_df)
+println()
+
+# DATA FRAME FOR TOTAL SS DIAGNOSED AFTER 2005 (5-Year Risk)
+totalss_after_2005_df = @from i in totalss_df begin
+    @where i.YOD > 2005
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx, i.YOD}
+    @collect DataFrame
+end;
+# display(sort!( totalss_after_2005_df, :YOD, rev = (true)))
+println()
+
+# DATA FRAME FOR TOTAL SS DIAGNOSED AFTER 2001 (10-Year Risk)
+totalss_after_2000_df = @from i in totalss_df begin
+    @where i.YOD > 2000
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx, i.YOD}
+    @collect DataFrame
+end;
+# display(sort!(totalss_after_2000_df, :YOD, rev = (true)))
+println()
+
+# DATA FRAME TO CALCULATED STANDARDIZED INCIDENCE RATIOS (SIR)
+SIR_ss_after_2000_df = @from i in totalss_after_2000_df begin
+    @select {i.Age, i.Cancer}
+    @collect DataFrame
+end;
+
+sorted_SIR_ss_after_2000_df = by(SIR_ss_after_2000_df, [:Age, :Cancer], N = :Cancer => length)
+sort!(sorted_SIR_ss_after_2000_df, :N, rev = (true))
+# display(sorted_SIR_ss_after_2000_df)
+
+# WRITING OF OUTPUT.TXT FILE
+CSV.write("SIR_SS_after_2000.txt", sorted_SIR_ss_after_2000_df)
+
+SIR_ss_df = @from i in totalss_df begin
+    @select {i.Age, i.Cancer}
+    @collect DataFrame
+end;
+
+sorted_SIR_totalss_df = by(SIR_ss_df, [:Age, :Cancer], N = :Cancer => length)
+sort!(sorted_SIR_totalss_df, :N, rev = (true))
+
+CSV.write("SIR_TotalSS.txt", sorted_SIR_totalss_df)
+
+
+# LESS EFFICIENT WAY TO COUNT MY TOTALS. INSTEAD USED THE ABOVE CODE.
+#= 
+SIR_Age_at_Dx_SS_2000 = open("SIR_Age_at_Dx_SS_2000.txt", "r")
+skip_flag = 0
+Age_dict = Dict()
+for line in readlines(SIR_Age_at_Dx_SS_2000)
+    if skip_flag == 0
+        global skip_flag = 1
+    end
+
+    line_array = split(line, ",")
+    Age_id = line_array[1]
+    Cancer_id = line_array[2]
+
+    if haskey(Age_dict, Age_id)
+            Age_dict[Age_id] += 1
+    else Age_dict[Age_id] = 1
+    end
+
+    # println("Age = $Age_id   Cancer = $Cancer_id")
+end
+
+
+for (count, code) in sort(collect(zip(values(Age_dict), keys((Age_dict)))), rev = true)
+    println("$code occurs $(Age_dict[code]) times")
+end
+=#
+
+# BUILDING A DICTIONARY TO COUNT THE NUMBER OF DIFFERENT CANCERS THAT OCCURRED IN PATIENTS AFTER 2000.
+SIR_ss_counts_dict_after_2000 = StatsBase.countmap(SIR_ss_after_2000_df[Symbol("Cancer")])
+SIR_ss_counts_after_2000_df = DataFrames.DataFrame()
+SIR_ss_counts_after_2000_df[Symbol("Cancer")] = collect(keys(SIR_ss_counts_dict_after_2000))
+SIR_ss_counts_after_2000_df[:N1] = collect(values(SIR_ss_counts_dict_after_2000))
+rename!(SIR_ss_counts_after_2000_df, :N1 => :Total_Cancer)
+# display(SIR_ss_counts_after_2000_df)
+
+# PRINTING OUT OF SEZARY SYNDROME PATIENTS WHO WENT ON TO DEVELOP SECONDARY MALIGNANCIES
+println("The total number of patients who had SS and went on to develop a secondary malignancy.")
+ss_with_secondarymalignancy_count = length(keys(StatsBase.countmap(ss_with_secondarymalignancy_df[:Id])))
+println("$ss_with_secondarymalignancy_count")
+
+# PRINTING OUT THE TOTAL NUMBER OF PATIENTS WHO HAD SEZARY SYNDROME.
+println("The total number of patients who had SS in the SEER-18 Dataset.")
+ss_total_count = length(keys(StatsBase.countmap(totalss_df[:Id])))
+println("$ss_total_count")
+
+# BUILDING A DICTIONARY TO COUNT THE NUMBER OF DIFFERENT CANCERS THAT OCCURRED IN PATIENTS WITH SEZARY SYNDROME.
+ss_counts_dict = StatsBase.countmap(ss_with_secondarymalignancy_df[Symbol("Cancer")])
+ss_counts_with_secondarymalignancy_df = DataFrames.DataFrame()
+ss_counts_with_secondarymalignancy_df[Symbol("Cancer")] = collect(keys(ss_counts_dict))
+ss_counts_with_secondarymalignancy_df[:N1] = collect(values(ss_counts_dict))
+rename!(ss_counts_with_secondarymalignancy_df, :N1 => :Total_Cancer)
+
+println("showing prevalence of secondary cancers in patients with primary diagnosis of SS.")
+sort!(ss_counts_with_secondarymalignancy_df, :Total_Cancer, rev = (true))
+# display(ss_counts_with_secondarymalignancy_df)
+println()
+println()
+
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+
+
+# CREATING DATA FRAME OF PATIENTS (MF) WHO DEVELOPED SECONDARY MALIGNANCIES
+# DATAFRAME COLLECTING TOTAL MYCOSIS FUNGOIDES DIAGNOSED IN 2006+
+totalmf_after_2005_df = @from i in totalmf_df begin
+    @where i.YOD > 2005
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx, i.YOD}
+    @collect DataFrame
+end;
+println()
+
+# DATAFRAME COLLECTING TOTAL MF DIAGNOSED IN 2011+
+totalmf_after_2010_df = @from i in totalmf_df begin
+    @where i.YOD >2010
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx, i.YOD}
+    @collect DataFrame
+end;
+println()
+
+# DATAFRAME CALCULATING TOTAL 1ST OF 2+ PRIMARY DIAGNOSES IN ENTIRE SEER-18 DATABASE (197X-2016)
+mf_with_secondarymalignancy_df = @from i in totalmf_df begin
+    @where i.Sequence == "1st of 2 or more primaries"
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx, i.YOD}
+    @collect DataFrame
+end;
+# display(first(mf_with_secondarymalignancy_df, 10))
+println()
+
+# DATAFRAME CALCULATING MYCOSIS FUNGOIDES WITH SECONDARY MALIGNANCY DX FROM 2011+
+mf_with_secondarymalignancy_after_2011_df = @from i in mf_with_secondarymalignancy_df begin
+    @where i.YOD > 2010
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx, i.YOD}
+    @collect DataFrame
+end;
+println()
+
+# DATAFRAME OF TOTAL PATIENTS WHO HAD MYCOSIS FUNGOIDES AFTER 2000 (10-year risk)
+totalmf_after_2000_df = @from i in totalmf_df begin
+    @where i.YOD > 2000
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx, i.YOD}
+    @collect DataFrame
+end;
+println()
+
+# DATA FRAME COLLECTING THE COUNTS OF PATIENTS WHO WERE DIAGNOSED WITH MF 2001+
+SIR_mf_after_2000_df = @from i in totalmf_after_2000_df begin
+    @select {i.Age, i.Cancer}
+    @collect DataFrame
+end;
+sorted_SIR_mf_after_2000_df = by(SIR_mf_after_2000_df, [:Age, :Cancer], N = :Cancer => length)
+sort!(sorted_SIR_mf_after_2000_df, :N, rev = (true))
+# display(sorted_SIR_mf_after_2000_df)
+
+# WRITING THIS INFORMATION TO A .TXT FILE
+CSV.write("SIR_MF_after_2000.txt", sorted_SIR_mf_after_2000_df)
+
+SIR_mf_after_2010_df = @from i in totalmf_after_2010_df begin
+    @select {i.Age, i.Cancer}
+    @collect DataFrame
+end;
+sorted_SIR_mf_after_2010_df = by(SIR_mf_after_2010_df, [:Age, :Cancer], N = :Cancer => length)
+sort!(sorted_SIR_mf_after_2010_df, :N, rev = (true))
+# display(sorted_SIR_mf_after_2010_df)
+
+# WRITING THE OBTAINED VALUES TO CALCULATE THE STANDARDIZED INCIDENCE RATIO 2011+
+CSV.write("SIR_MF_after_2010.txt", sorted_SIR_mf_after_2010_df)
+
+# DISPLAYING THE PATIENTS WHO DEVELOPED MYCOSIS FUNGOIDES AS A PRIMARY DIAGNOSIS AND WENT ON TO DEVELOP SECONDARY CANCERS
+println("The total number of patients who had MF as a primary diagnosis and developed a secondary cancer")
+mf_with_secondarymalignancy_count = length(keys(StatsBase.countmap(totalmf_df[:Id])))
+println("$mf_with_secondarymalignancy_count")
+
+# DICTIONARY CREATION TO SHOW THE DIFFERENT TYPES OF SECONDARY CANCERS PATIENTS DEVELOPED AFTER DIAGNOSIS WITH MYCOSIS FUNGOIDES
+mf_counts_dict = StatsBase.countmap(mf_with_secondarymalignancy_df[Symbol("Cancer")])
+mf_counts_with_secondarymalignancy_df = DataFrames.DataFrame()
+mf_counts_with_secondarymalignancy_df[Symbol("Cancer")] = collect(keys(mf_counts_dict))
+mf_counts_with_secondarymalignancy_df[:N1] = collect(values(mf_counts_dict))
+rename!(mf_counts_with_secondarymalignancy_df, :N1 => :Total_Cancer)
+
+println("showing prevalence of secondary cancers in patients with primary diagnosis of MF.")
+sort!(mf_counts_with_secondarymalignancy_df, :Total_Cancer, rev = (true))
+display(mf_counts_with_secondarymalignancy_df)
+println()
+
+
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+
+# DATA FRAME CREATION TO REMOVE PATIENTS WHO HAD CANCERS PRIOR TO BEING DIAGNOSED WITH MYCOSIS FUNGOIDES
+println("Removing patients who have had cancers prior to Sezary Syndrome or Mycosis Fungoides.")
+
+# CREATING DATA FRAME WITH PATIENTS WHO DID DEVELOP SECONDARY MALIGNANCIES.
+ctcl_with_secondarymalignancy_df = @from i in totalctcl_df begin
+    @where i.Sequence == "1st of 2 or more primaries"
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx, i.YOD}
+    @collect DataFrame
+end;
+
+# DATA FRAME FOR CTCL (BOTH MF AND SS) AFTER 2010 WITH SECONDARY MALIGNANCY
+ctcl_with_secondarymalignancy_after_2011_df = @from i in ctcl_with_secondarymalignancy_df begin
+    @where i.YOD > 2010
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx, i.YOD}
+    @collect DataFrame
+end;
+
+# DATA FRAME FOR TOTAL CTCL DIAGNOSED AFTER 2005
+totalctcl_after_2005_df = @from i in totalctcl_df begin
+    @where i.YOD > 2005
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx, i.YOD}
+    @collect DataFrame
+end;
+
+# DATA FRAME FOR TOTAL CTCL DIAGNOSED AFTER 2000
+totalctcl_after_2000_df = @from i in totalctcl_df begin
+    @where i.YOD >2000
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx, i.YOD}
+    @collect DataFrame
+end;
+
+# SHOWING DATA FRAME OF PATIENTS WHO DEVELOPD SECONDARY CANCERS IF THEY HAD SEZARY SYNDROME OR MYCOSIS FUNGOIDES
+println()
+println("Dataframe containing patients who had MF or SS as a primary Cancer and developed secondary malignancies.")
+println()
+sort!(ctcl_with_secondarymalignancy_df, :Id, rev = (false))
+# display(first(ctcl_with_secondarymalignancy_df,100))
+
+# CREATING .TXT OF PATIENTS WHO HAD EITHER SS OR MF AND WENT ON TO DEVELOP SECONDARY CANCERS.
+println("\n")
+println("Writing out a .txt file with patients who had a secondary malignancy.")
+
+CSV.write("ctcl_with_secondarymalignancy.txt", ctcl_with_secondarymalignancy_df)
+
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+################################################################################################################################################################################################################ 
+
+# REDUNDANT DATA FRAME THAT SEPARATES MYCOSIS FUNGOIDES FROM SEZARY SYNDROME
+#=
+println("Separating mycosis fungoides from sezary syndrome.")
+MF_with_secondarymalignancy_df = @from i in ctcl_with_secondarymalignancy_df begin
+    @where i.Lymphoma == "2(b)2.1.1 Mycosis fungoides"
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx}
+    @collect DataFrame
+end;
+sort!(ctcl_with_secondarymalignancy_df, :Cancer, rev = (false))
+display(first(MF_with_secondarymalignancy_df,100))
+
+# CREATES A COUNT OF THE CANCERS PATIENTS DEVELOPED WHO HAD MYCOSIS FUNGOIDES
+MF_counts_dict = StatsBase.countmap(MF_with_secondarymalignancy_df[Symbol("Cancer")])
+MF_with_secondarymalignancy_df = DataFrames.DataFrame()
+MF_with_secondarymalignancy_df[Symbol("Cancer")] = collect(keys(MF_counts_dict))
+MF_with_secondarymalignancy_df[:N3] = collect(values(MF_counts_dict))
+rename!(MF_with_secondarymalignancy_df, :N3 => :MF_secondary_cancer_count)
+display(MF_with_secondarymalignancy_df)
+=#
+
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+################################################################################################################################################################################################################ 
+
+# CREATING DATA FRAME WITH PATIENTS WHO DID NOT DEVELOP SECONDARY MALIGNANCIES
+ctcl_without_secondarymalignancy_df = @from i in totalctcl_df begin
+    @where i.Sequence == "One primary only"
+    @select {i.Id, i.Age, i.Sex, i.Race, i.Lymphoma, i.Cancer, i.Sequence, i.Survival_months, i.COD, i.Age_at_Dx}
+    @collect DataFrame
+end;
+println()
+# println("Dataframe containing patients who had MF or SS as a primary Cancer, but did not develop secondary malignancies.")
+println()
+# display(first(ctcl_without_secondarymalignancy_df,10))
+
+println("\n")
+println("Writing out a .txt with patients who did not have a secondary malignancy")
+CSV.write("ctcl_without_secondarymalignancy.txt", ctcl_with_secondarymalignancy_df)
+
+
+# SHOWING REDUCTION IN SIZE OF ORIGINAL DATAFRAME
+println()
+println("original database was (This count has duplicate rows for the same patient):")
+display(size(totalctcl_df))
+
+individuals_count = length(keys(StatsBase.countmap(totalctcl_df[:Id])))
+println()
+println("There are \"$individuals_count\" in this data frame.")
+
+# SHOWING AMOUNT OF PATIENTS WITH SECONDARY MALIGNANCY DEVELOPMENT
+println()
+println("The number of patients who developed secondary malignancies after Dx with MF or SS was:")
+display(size(ctcl_with_secondarymalignancy_df))
+
+# SHOWING AMOUNT OF PATIENTS WHO DID NOT DEVELOP SECONDARY MALIGNANCY
+println()
+println("The number of patients who only developed MF or SS was:")
+display(size(ctcl_without_secondarymalignancy_df))
+
+# SHOW THE COLUMNS AND ROWS IN NEW DATAFRAME
+println()
+# display(describe(secondary_counts_dict))
+println()
+
+
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+################################################################################################################################################################################################################
+
+#DICTIONARY CREATION BLOCK
+
+# MUTED BECAUSE BELOW I DO NOT CREATE A GRAPH THAT DISPLAYS THE SEXES OF MYCOSIS FUNGOIDES AND SEZARY SYNDROME
+#=
+# DICTIONARY FOR NUMBER OF SEXES WITH SECONDARY MALIGNANCY DEVELOPMENT
+sex_counts_dict = StatsBase.countmap(ctcl_with_secondarymalignancy_df[Symbol("Sex")])
+sex_counts_with_secondarymalignancy_df = DataFrames.DataFrame()
+sex_counts_with_secondarymalignancy_df[Symbol("Sex")] = collect(keys(sex_counts_dict))
+sex_counts_with_secondarymalignancy_df[:N1] = collect(values(sex_counts_dict))
+rename!(sex_counts_with_secondarymalignancy_df, :N1 => :Total_Sex)
+
+println("showing prevalence of sex in patients who developed a secondary cancer after MF or SS")
+# display(sex_counts_with_secondarymalignancy_df)
+
+# DICTIONARY FOR CAUSE OF DEATH WITH SECONDARY MALIGNANCY DEVELOPMENT
+COD_counts_dict = StatsBase.countmap(ctcl_with_secondarymalignancy_df[Symbol("COD")])
+COD_counts_with_secondarymalignancy_df = DataFrames.DataFrame()
+COD_counts_with_secondarymalignancy_df[Symbol("COD")] = collect(keys(COD_counts_dict))
+COD_counts_with_secondarymalignancy_df[:N2] = collect(values(COD_counts_dict))
+rename!(COD_counts_with_secondarymalignancy_df, :N2 => :Total_COD)
+
+println()
+println("showing prevalence of cause of death in patients who had a secondary cancer after MF or SS")
+sort!(COD_counts_with_secondarymalignancy_df, (order(:Total_COD)), rev = (true))
+# display(COD_counts_with_secondarymalignancy_df)
+=#
+
+println()
+println("Writing out new data frame of the counts of secondary cancers.")
+
+# DICTIONARY FOR NUMBER OF SECONDARY CANCERS DEVELOPED IN PATIENTS WHO HAD EITHER SS OR MF
+counts_dict = StatsBase.countmap(ctcl_with_secondarymalignancy_df[Symbol("Cancer")])
+counts_with_secondarymalignancy_df = DataFrames.DataFrame()
+counts_with_secondarymalignancy_df[Symbol("Cancer")] = collect(keys(counts_dict))
+counts_with_secondarymalignancy_df[:N] = collect(values(counts_dict))
+rename!(counts_with_secondarymalignancy_df, :N => :Total)
+
+# println("Patients diagnosed with MF or SS as a primary cancer with secondary malignancy involvement.")
+sort!(counts_with_secondarymalignancy_df, (order(:Total)), rev = (true))
+# display(counts_df)
+
+
+println()
+println("Patients who had SS after 2011 and developed a secondary cancer:")
+println("Total number of patients who had SS after 2005 (5-year risk)")
+totalss_after_2005_count = length(keys(StatsBase.countmap(totalss_after_2005_df[:Id])))
+println("$totalss_after_2005_count")
+println()
+println("Total number of patients who had SS after 2000 (10-year risk)")
+totalss_after_2000_count = length(keys(StatsBase.countmap(totalss_after_2000_df[:Id])))
+println("$totalss_after_2000_count")
+println()
+
+
+
+
+
+# DICTIONARY FOR NUMBER OF SECONDARY CANCERS DEVELOPED IN PATIENTS WITH SEZARY SYNDROME AFTER 2011
+ss_counts_dict_after_2011 = StatsBase.countmap(ss_with_secondarymalignancy_after_2011_df[Symbol("Cancer")])
+ss_counts_with_secondarymalignancy_after_2011_df = DataFrames.DataFrame()
+ss_counts_with_secondarymalignancy_after_2011_df[Symbol("Cancer")] = collect(keys(ss_counts_dict_after_2011))
+ss_counts_with_secondarymalignancy_after_2011_df[:N] = collect(values(ss_counts_dict_after_2011))
+rename!(ss_counts_with_secondarymalignancy_after_2011_df, :N => :Total)
+
+temp_column_ss_after_2011 = Vector{Union{Float64, Missing}}(undef, size(ss_counts_with_secondarymalignancy_after_2011_df, 1))
+for i = 1:size(ss_counts_with_secondarymalignancy_after_2011_df, 1)
+    temp_column_ss_after_2011[i] = ss_counts_with_secondarymalignancy_after_2011_df[i, :Total]/totalss_after_2005_count
+end; 
+
+ss_counts_with_secondarymalignancy_after_2011_df[:Frequency_of_Ca_After_5_Years] = temp_column_ss_after_2011
+
+temp_column_ss_after_2000 = Vector{Union{Float64, Missing}}(undef, size(ss_counts_with_secondarymalignancy_after_2011_df, 1))
+for i = 1:size(ss_counts_with_secondarymalignancy_after_2011_df, 1)
+    temp_column_ss_after_2000[i] = ss_counts_with_secondarymalignancy_after_2011_df[i, :Total]/totalss_after_2000_count
+end; 
+
+ss_counts_with_secondarymalignancy_after_2011_df[:Frequency_of_Ca_After_10_Years] = temp_column_ss_after_2000
+
+display(sort!(ss_counts_with_secondarymalignancy_after_2011_df, (order(:Total)), rev = true))
+
+println()
+println("Patients who had MF after 2011 and developed a secondary cancer:")
+println("Total number of patients who developed MF after 2005: (5-Year Risk)")
+totalmf_counts_after_2005 = length(keys(StatsBase.countmap(totalmf_after_2005_df[:Id])))
+println("$totalmf_counts_after_2005")
+println()
+println("Total number of patients who developed MF after 2000: (10-Year Risk)")
+totalmf_counts_after_2000 = length(keys(StatsBase.countmap(totalmf_after_2000_df[:Id])))
+println("$totalmf_counts_after_2000")
+
+
+
+
+# DICTIONARY FOR NUMBER OF SECONDARY CANCERS DEVELOPED IN PATIENTS WITH MYCOSIS FUNGOIDES AFTER 2005
+mf_counts_dict_after_2011 = StatsBase.countmap(mf_with_secondarymalignancy_after_2011_df[Symbol("Cancer")])
+mf_counts_with_secondarymalignancy_after_2011_df = DataFrames.DataFrame()
+mf_counts_with_secondarymalignancy_after_2011_df[Symbol("Cancer")] = collect(keys(mf_counts_dict_after_2011))
+mf_counts_with_secondarymalignancy_after_2011_df[:N] = collect(values(mf_counts_dict_after_2011))
+rename!(mf_counts_with_secondarymalignancy_after_2011_df, :N => :Total)
+
+temp_column_mf_after_2011 = Vector{Union{Float64, Missing}}(undef, size(mf_counts_with_secondarymalignancy_after_2011_df, 1))
+for i = 1:size(mf_counts_with_secondarymalignancy_after_2011_df, 1)
+    temp_column_mf_after_2011[i] = mf_counts_with_secondarymalignancy_after_2011_df[i, :Total]/totalmf_counts_after_2005
+end; 
+
+mf_counts_with_secondarymalignancy_after_2011_df[:Frequency_of_Ca_After_5_Years] = temp_column_mf_after_2011
+
+# DICTIONARY FOR NUMBER OF SECONDARY CANCERS DEVELOPED IN PATIENTS WITH MYCOSIS FUNGOIDES AFTER 2000
+temp_column_mf_after_2000 = Vector{Union{Float64, Missing}}(undef, size(mf_counts_with_secondarymalignancy_after_2011_df, 1))
+for i = 1:size(mf_counts_with_secondarymalignancy_after_2011_df, 1)
+    temp_column_mf_after_2000[i] = mf_counts_with_secondarymalignancy_after_2011_df[i, :Total]/totalmf_counts_after_2000
+end; 
+
+mf_counts_with_secondarymalignancy_after_2011_df[:Frequency_of_Ca_After_10_Years] = temp_column_mf_after_2000
+
+display(sort!(mf_counts_with_secondarymalignancy_after_2011_df, (order(:Total)), rev = true ))
+
+println()
+println("Patients who had CTCL after 2011 and developed a secondary cancer:")
+println("Total number of patients who developed CTCL after 2005 per SEER-18:")
+totalctcl_after_2005_count = length(keys(StatsBase.countmap(totalctcl_after_2005_df[:Id])))
+println("$totalctcl_after_2005_count")
+println()
+println("Total number of patients who developed CTCL after 2000 (10-Year Risk)")
+totalctcl_after_2000_count = length(keys(StatsBase.countmap(totalctcl_after_2000_df[:Id])))
+println("$totalctcl_after_2000_count")
+
+
+
+
+
+# DICTIONARY FOR NUMBER OF SECONDARY CANCERS DEVELOPED IN PATIENTS WITH CTCL 2011+
+ctcl_counts_dict_after_2011 = StatsBase.countmap(ctcl_with_secondarymalignancy_after_2011_df[Symbol("Cancer")])
+ctcl_counts_with_secondarymalignancy_after_2011_df = DataFrames.DataFrame()
+ctcl_counts_with_secondarymalignancy_after_2011_df[Symbol("Cancer")] = collect(keys(ctcl_counts_dict_after_2011))
+ctcl_counts_with_secondarymalignancy_after_2011_df[:N] = collect(values(ctcl_counts_dict_after_2011))
+rename!(ctcl_counts_with_secondarymalignancy_after_2011_df, :N => :Total)
+
+temp_column_ctcl_after_2011 = Vector{Union{Float64, Missing}}(undef, size(ctcl_counts_with_secondarymalignancy_after_2011_df, 1))
+for i = 1:size(ctcl_counts_with_secondarymalignancy_after_2011_df, 1)
+    temp_column_ctcl_after_2011[i] = ctcl_counts_with_secondarymalignancy_after_2011_df[i, :Total]/totalctcl_after_2005_count
+end; 
+
+ctcl_counts_with_secondarymalignancy_after_2011_df[:Frequency_of_Ca_After_5_Years] = temp_column_ctcl_after_2011
+
+temp_column_ctcl_after_2000 = Vector{Union{Float64, Missing}}(undef, size(ctcl_counts_with_secondarymalignancy_after_2011_df, 1))
+for i = 1:size(ctcl_counts_with_secondarymalignancy_after_2011_df, 1)
+    temp_column_ctcl_after_2000[i] = ctcl_counts_with_secondarymalignancy_after_2011_df[i, :Total]/totalctcl_after_2000_count
+end; 
+
+ctcl_counts_with_secondarymalignancy_after_2011_df[:Frequency_of_Ca_After_10_Years] = temp_column_ctcl_after_2000
+
+display(sort!(ctcl_counts_with_secondarymalignancy_after_2011_df, (order(:Total)), rev = true))
+
+
+
+
+# WRITING THESE DATA FRAMES OUT TO .TXT CAN BE USED TO SHOW THE RISK OF SECONDARY MALIGNANCY DEVELOPMENT AFTER DIAGNOSIS WITH MF,SS,OR CTCL
+CSV.write("5and10yearfrequencyMF.txt", mf_counts_with_secondarymalignancy_after_2011_df)
+CSV.write("5and10yearfrequencySS.txt", ss_counts_with_secondarymalignancy_after_2011_df)
+CSV.write("5and10yearfrequencyCTCL.txt", ctcl_counts_with_secondarymalignancy_after_2011_df)
+
+
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+################################################################################################################################################################################################################
+
+
+# CREATION OF A DATA FRAME TO QUERY 2 BELOW >>> BUILDING THE CHARTS.
+
+counts_dict1 = StatsBase.countmap(totalctcl_df[Symbol("Cancer")])
+counts_df1 = DataFrames.DataFrame()
+counts_df1[Symbol("Cancer")] = collect(keys(counts_dict1))
+counts_df1[:N] = collect(values(counts_dict1))
+rename!(counts_df1, :N => :Total)
+
+# println("Patients diagnosed with MF or SS at any point with secondary malignancy involvement.")
+sort!(counts_df1, (order(:Total)), rev = (true))
+# display(counts_df1)
+
+
+
+
+
+# QUERY 1 = SEARCHING THE ALL OF THE MF AND SS TO FIND HOW MANY PATIENTS DEVELOPED A SECONDARY MALIGNANCY 
+
+
+q1 = @from i in counts_with_secondarymalignancy_df begin
+        @where i.Total > 20 && i.Total < 999
+        @select {i.Cancer, i.Total}
+        @collect DataFrame
+end;
+sort!(q1, (order(:Total)), rev = (true))
+
+# ADDING ON ANOTHER COLUMN TO THE DATA FRAME TO SHOW THE FREQUENCY OF SECONDARY MALIGNANCY DEVELOPMENT
+
+temp_column = Vector{Union{Float64, Missing}}(undef, size(q1, 1))
+for i = 1:size(q1, 1)
+    temp_column[i] = q1[i, :Total]/individuals_count
+end; 
+
+# RENAMING THIS COLUMN TO 'Frequency_of_Ca'
+q1[:Frequency_of_Ca] = temp_column
+
+
+println()
+println("Patients with greater than 20 secondary malignancies after being diagnosed with MF or SS.")
+println()
+display(q1)
+
+
+
+
+
+# Q2 = GENERATING A COLUMN THAT SHOWS THE FREQUENCY OF SECONDARY MALIGNANCIES IF A PATIENT HAS BEEN DIAGNOSED WITH SS OR MF AT ANY POINT
+
+q2 = @from i in counts_df1 begin
+    @where i.Total > 20 && i.Total <999
+    @select {i.Cancer, i.Total}
+    @collect DataFrame
+end;
+sort!(q2, (order(:Total)), rev = (true))
+println()
+println("Patients with greater than 20 secondary malignancies irregardless of sequence number for MF or SS.")
+println()
+
+temp_column2 = Vector{Union{Float64, Missing}}(undef, size(q2, 1))
+for i = 1:size(q2, 1)
+    temp_column2[i] = q2[i, :Total]/individuals_count
+end; 
+
+q2[:Frequency_of_Ca] = temp_column2
+display(q2)
+
+
+
+# Writing out a .txt of results
+println()
+println("Writing these results into a .txt file located at C:/Users/Parker/Desktop/Julia")
+
+# CSV.write("pwoolle1_ctcl_output.txt", counts_df)
+
+# ss_mf_ca_df = CSV.File("pwoolle1_ctcl_output.txt", delim = ",", header = 1) |> DataFrame
+
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+###############################################################################################################################################################################################################
+
+
+
+# CHART CREATION
+
+# BAR CHART SHOWING PATIENTS WHO DEVELOPED SECONDARY CANCERS AFTER THEY WERE FIRST DIAGNOSED WITH SEZARY OR MYCOSIS 
+p = @vlplot(
+# setting the data to "counts_df"
+    data = q1,
+# type of chart
+    #mark = {type = "bar"},
+# title addition
+    title = " ",
+# setting axes
+    encoding = {
+        y = {
+                field = "Cancer", type = "nominal",
+                axis = {title = " "},
+                sort = {encoding = "x"}
+        },
+        x = {
+            field = "Total",
+            type = "quantitative",
+            axis = {title = "Frequency"}
+        },
+    color = {
+            field = "Cancer", type = "nominal", legend = nothing,
+            scale = {range = ["#d9200f"]}
+            }
+    },
+    layer = [{
+            mark = {type = "bar"}},
+            {
+            mark = {
+                    type = "text",
+                    align = "left",
+                    baseline = "middle",
+                    dx = 3
+                    },
+            encoding = {
+                        text = {field = "Total", type = "quantitative"}
+            }
+    }]
+);
+
+# BARCHART SHOWING HOW MANY PATIENTS DEVELOPED SECONDARY MALIGNANCIES WHO HAD SEZARY OR MYCOSIS AT ONE POINT IN THEIR LIVES.
+p1 = @vlplot(
+# setting the data to "counts_df"
+    data = q2,
+# type of chart
+    #mark = {type = "bar"},
+# title addition
+    title = " ",
+# setting axes
+    encoding = {
+        x = {
+                field = "Cancer", type = "nominal",
+                axis = {title = " "},
+                sort = {encoding = "y"}
+        },
+        y = {
+            field = "Total",
+            type = "quantitative",
+            aggregate = "sum",
+            axis = {title = "Frequency"}
+        },
+    color = {
+            field = "Cancer", type = "nominal", legend = nothing,
+            scale = {range = ["#0f6bdb"]}
+    },
+    },
+    layer = [{
+            mark = {type = "bar", continuousBandSize = 1}},
+            {
+            mark = {
+                    type = "text",
+                    dy = -5
+                    },
+            encoding = {
+                        text = {field = "Total", type = "quantitative"}
+            }
+    }]
+);
+
+# BAR CHART OF DISCREPANCIES BETWEEN SEXES OF PATIENTS WITH SECONDARY MALIGNANCIES
+#=
+psex = @vlplot(
+# setting the data to "counts_df"
+    data = sex_counts_with_secondarymalignancy_df,
+# type of chart
+    #mark = {type = "bar"},
+# title addition
+    title = " ",
+# setting axes
+    encoding = {
+        x = {
+                field = "Sex", type = "nominal",
+                axis = {title = " "},
+                sort = {encoding = "y"}
+        },
+        y = {
+            field = "Total_Sex",
+            type = "quantitative",
+            aggregate = "sum",
+            axis = {title = "Frequency"}
+        },
+    color = {
+            field = "Sex", type = "nominal", legend = nothing,
+            scale = {range = ["#d62d54"]}
+    },
+    },
+    layer = [{
+            mark = {type = "bar", continuousBandSize = 1}},
+            {
+            mark = {
+                    type = "text",
+                    dy = -5
+                    },
+            encoding = {
+                        text = {field = "Total_Sex", type = "quantitative"}
+            }
+    }]
+);
+=#
+
+# BAR CHART SHOWING HOW MANY PATIENTS ONLY HAD A PRIMARY DIAGNOSIS & THOSE WHO HAD A SECONDARY DIAGNOSIS.
+pdispo = @vlplot(
+# setting the data to "counts_df"
+    data = disposition_to_dev_df,
+# type of chart
+    #mark = {type = "bar"},
+# title addition
+    title = " ",
+# setting axes
+    encoding = {
+        x = {
+                field = "Type_of_CTCL", type = "nominal",
+                axis = {title = " "},
+                sort = {encoding = "y"}
+        },
+        y = {
+            field = "counts",
+            type = "quantitative",
+            aggregate = "sum",
+            axis = {title = "Incidence"}
+        },
+    color = {
+            field = "Type_of_CTCL", type = "nominal", legend = nothing,
+            scale = {range = ["#9c2525"]}
+    },
+    },
+    layer = [{
+            mark = {type = "bar", continuousBandSize = 1}},
+            {
+            mark = {
+                    type = "text",
+                    dy = -5
+                    },
+            encoding = {
+                        text = {field = "counts", type = "quantitative"}
+            }
+    }]
+);
+
+# SAVING CHARTS TO DIRECTORY
+
+save("Disposition_to_develop_CTCL.pdf", pdispo)
+save("CTCL_secondary_cancer2.pdf", p)
+save("full_CTCL_secondary_cancer.pdf", p1)
+# save("SEX_pt_secondary_cancer.pdf", psex)
+
+
+println("3 new graphs have been overwritten in the folder 'Julia'.")
